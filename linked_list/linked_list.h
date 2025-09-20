@@ -2,13 +2,13 @@
 #define LINKED_LIST_H_
 
 /**
- * Integer node type for linked list
+ * Generic node type for linked list
  *
- * @param int data
+ * @param void *data
  * @param Node *next
  */
 typedef struct node {
-  char *data;
+  void *data;
   struct node *next;
 } Node;
 
@@ -41,15 +41,17 @@ void print_list(List *list);
  * Appends data to the end of the linked list
  *
  * @param List *list
+ * @param void *data
  */
-List *append(List *list, char *data);
+List *append(List *list, void *data);
 
 /**
  * Prepends data to the beginning of the linked list
  *
  * @param List *list
+ * @param void *data
  */
-List *prepend(List *list, char *data);
+List *prepend(List *list, void *data);
 
 /**
  * Frees the linked list from memory

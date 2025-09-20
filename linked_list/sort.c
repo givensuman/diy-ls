@@ -1,8 +1,29 @@
 #include "sort.h"
 #include "linked_list.h"
 #include <string.h>
+#include <sys/stat.h>
 
-List *sort(List *list) {
+typedef struct {
+  char *name;
+  struct stat statbuf;
+} FileInfo;
+
+int compare_files(FileInfo *a, FileInfo *b, int by_time, int by_size) {
+  if (by_size) {
+    if (a->statbuf.st_size != b->statbuf.st_size) {
+      return a->statbuf.st_size - b->statbuf.st_size;
+    }
+  } else if (by_time) {
+    if (a->statbuf.st_mtime != b->statbuf.st_mtime) {
+      return a->statbuf.st_mtime - b->statbuf.st_mtime;
+    }
+  }
+
+  // Default: alphabetical by name
+  return strcmp(a->name, b->name);
+}
+
+List *sort(List *list, int reverse, int by_time, int by_size) {
   if (list == NULL || list->head == NULL || list->head->next == NULL) {
     return list; // List is empty or has one element
   }
@@ -16,9 +37,17 @@ List *sort(List *list) {
     node = list->head;
 
     while (node->next != comparison) {
-      if (strcmp(node->data, node->next->data) > 0) {
+      FileInfo *a = (FileInfo *)node->data;
+      FileInfo *b = (FileInfo *)node->next->data;
+
+      int cmp = compare_files(a, b, by_time, by_size);
+      if (reverse) {
+        cmp = -cmp;
+      }
+
+      if (cmp > 0) {
         // Swap data
-        char *temp = node->data;
+        void *temp = node->data;
         node->data = node->next->data;
         node->next->data = temp;
         swapped = 1;

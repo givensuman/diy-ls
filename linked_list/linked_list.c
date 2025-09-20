@@ -18,13 +18,13 @@ void print_list(List *list) {
 
   Node *node = list->head;
   while (node != NULL) {
-    printf("%s%s", node->data, node->next == NULL ? "" : "\n");
+    printf("%p%s", node->data, node->next == NULL ? "" : "\n");
     node = node->next;
   }
   printf("\n");
 }
 
-List *append(List *list, char *data) {
+List *append(List *list, void *data) {
   Node *node = malloc(sizeof(Node));
   node->data = data;
   node->next = NULL;
@@ -48,7 +48,7 @@ List *append(List *list, char *data) {
   return list;
 }
 
-List *prepend(List *list, char *data) {
+List *prepend(List *list, void *data) {
   Node *node = malloc(sizeof(Node));
   node->data = data;
 
