@@ -19,7 +19,6 @@ typedef struct {
   struct stat statbuf;
 } FileInfo;
 
-// https://stackoverflow.com/a/12506/14561388
 List *read_dir(char *path, int all_files) {
   DIR *dp;
   struct dirent *ep;
@@ -32,10 +31,10 @@ List *read_dir(char *path, int all_files) {
       if (!all_files && ep->d_name[0] == '.') {
         continue; // Skip hidden files unless -a is specified
       }
-      
+
       FileInfo *info = malloc(sizeof(FileInfo));
       info->name = strdup(ep->d_name);
-      
+
       char full_path[PATH_MAX];
       snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
       if (stat(full_path, &info->statbuf) != 0) {
@@ -43,7 +42,7 @@ List *read_dir(char *path, int all_files) {
         free(info);
         continue;
       }
-      
+
       append(entries, info);
     }
 
@@ -82,12 +81,12 @@ void print_human_readable_size(off_t size) {
   const char *units[] = {"", "K", "M", "G", "T"};
   int unit_index = 0;
   double display_size = (double)size;
-  
+
   while (display_size >= 1024 && unit_index < 4) {
     display_size /= 1024;
     unit_index++;
   }
-  
+
   if (unit_index == 0) {
     printf("%4lld ", (long long)size);
   } else {
@@ -98,22 +97,29 @@ void print_human_readable_size(off_t size) {
 void print_long_format(FileInfo *info, int human_readable) {
   print_permissions(info->statbuf.st_mode);
   printf(" %lu ", (unsigned long)info->statbuf.st_nlink);
-  
+
   struct passwd *pw = getpwuid(info->statbuf.st_uid);
   struct group *gr = getgrgid(info->statbuf.st_gid);
   printf("%s %s ", pw ? pw->pw_name : "unknown", gr ? gr->gr_name : "unknown");
-  
+
   if (human_readable) {
     print_human_readable_size(info->statbuf.st_size);
   } else {
     printf("%8lld ", (long long)info->statbuf.st_size);
   }
-  
+
   char time_str[20];
-  strftime(time_str, sizeof(time_str), "%b %d %H:%M", localtime(&info->statbuf.st_mtime));
+  strftime(time_str, sizeof(time_str), "%b %d %H:%M",
+           localtime(&info->statbuf.st_mtime));
   printf("%s ", time_str);
-  
-  printf("%s\n", info->name);
+
+  if (S_ISDIR(info->statbuf.st_mode)) {
+    printf("\e[1;34m%-6s/\e[m\n", info->name);
+  } else if (info->statbuf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) {
+    printf("\e[1;32m%s\e[m*\n", info->name);
+  } else {
+    printf("%s\n", info->name);
+  }
 }
 
 void print_list_long(List *list, int human_readable) {
@@ -140,7 +146,12 @@ void free_file_list(List *list) {
 }
 
 int main(int argc, char **argv) {
-  Options opts = {0, 0, 0, 0, 0, 0};
+  Options opts = {.all_files = 0,
+                  .long_format = 0,
+                  .reverse_sort = 0,
+                  .sort_by_time = 0,
+                  .sort_by_size = 0,
+                  .human_readable = 0};
   int opt;
 
   while ((opt = getopt(argc, argv, "alrthS")) != -1) {
@@ -172,14 +183,21 @@ int main(int argc, char **argv) {
   char *path = (optind < argc) ? argv[optind] : ".";
 
   List *entries = read_dir(path, opts.all_files);
-  entries = sort(entries, opts.reverse_sort, opts.sort_by_time, opts.sort_by_size);
+  entries =
+      sort(entries, opts.reverse_sort, opts.sort_by_time, opts.sort_by_size);
   if (opts.long_format) {
     print_list_long(entries, opts.human_readable);
   } else {
-    // For short format, just print names
     Node *node = entries->head;
     while (node != NULL) {
-      printf("%s\n", ((FileInfo *)node->data)->name);
+      FileInfo *info = (FileInfo *)node->data;
+      if (S_ISDIR(info->statbuf.st_mode)) {
+        printf("\e[1;34m%s/\e[m\n", info->name);
+      } else if (info->statbuf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) {
+        printf("\e[1;32m%s\e[m*\n", info->name);
+      } else {
+        printf("%s\n", info->name);
+      }
       node = node->next;
     }
   }

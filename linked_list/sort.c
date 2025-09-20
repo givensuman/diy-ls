@@ -9,6 +9,13 @@ typedef struct {
 } FileInfo;
 
 int compare_files(FileInfo *a, FileInfo *b, int by_time, int by_size) {
+  // Sort directories first
+  int a_is_dir = S_ISDIR(a->statbuf.st_mode);
+  int b_is_dir = S_ISDIR(b->statbuf.st_mode);
+  if (a_is_dir != b_is_dir) {
+    return b_is_dir - a_is_dir; // directories first
+  }
+
   if (by_size) {
     if (a->statbuf.st_size != b->statbuf.st_size) {
       return a->statbuf.st_size - b->statbuf.st_size;
